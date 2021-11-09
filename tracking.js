@@ -13,15 +13,15 @@ const LAUNCH_PUPPETEER_OPTS = {
 };
 
 const PAGE_PUPPETEER_OPTS = {
-  networkIdle2Timeout: 5000,
+  networkIdle2Timeout: 1000,
   waitUntil: "networkidle2",
-  timeout: 10000,
+  timeout: 2800,
 };
 
 module.exports = async function (req, res) {
   const { id } = req.params;
+  const browser = await puppeteer.launch(LAUNCH_PUPPETEER_OPTS);
   try {
-    const browser = await puppeteer.launch(LAUNCH_PUPPETEER_OPTS);
     const page = await browser.newPage();
     await page.setExtraHTTPHeaders({
       "Accept-Language": "ru",
@@ -30,22 +30,31 @@ module.exports = async function (req, res) {
       `https://www.pochta.ru/tracking#${id}`,
       PAGE_PUPPETEER_OPTS
     );
-    await page.waitForSelector("div[data-barcode]");
-    const data = await page.evaluate(() => {
-      const root = document.querySelector("div[data-barcode]");
-      const container = root.children[1];
-      const itemsContainer = container.children[0].children[0];
-      const items = [].slice.call(itemsContainer.children);
-      return items.map((el) => {
-        const status = el.querySelectorAll("span");
-        return {
-          text: el.querySelector("h2").innerText,
-          status: status.length > 0 ? status[1].innerText : "",
-        };
-      });
+    await page.waitForSelector("div[data-barcode]", { timeout: 2000 });
+    const result = await page.evaluate(() => {
+      try {
+        const root = document.querySelector("div[data-barcode]");
+        const container = root.children[1];
+        const itemsContainer = container.children[0].children[0];
+        const items = [].slice.call(itemsContainer.children);
+        const data = items.map((el) => {
+          const status = el.querySelectorAll("span");
+          return {
+            text: el.querySelector("h2").innerText,
+            status: status.length > 0 ? status[1].innerText : "",
+          };
+        });
+        return { data };
+      } catch (err) {
+        return { error: "ok", message: err };
+      }
     });
-    res.json({ data });
+
+    res.json(result);
   } catch (err) {
+    console.log(err);
     res.json({ error: "ok", message: err });
+  } finally {
+    browser.close();
   }
 };
