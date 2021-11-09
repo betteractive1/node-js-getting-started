@@ -30,26 +30,37 @@ module.exports = async function (req, res) {
       `https://www.pochta.ru/tracking#${id}`,
       PAGE_PUPPETEER_OPTS
     );
-    await page.waitForSelector("div[data-barcode]", { timeout: 2800 });
+    await page.waitForSelector("#page-tracking div div");
     const result = await page.evaluate(() => {
       try {
         const root = document.querySelector("div[data-barcode]");
-        const container = root.children[1];
-        const itemsContainer = container.children[0].children[0];
-        const items = [].slice.call(itemsContainer.children);
-        const data = items.map((el) => {
-          const status = el.querySelectorAll("span");
+        if (root) {
+          const container = root.children[1];
+          const itemsContainer = container.children[0].children[0];
+          const items = [].slice.call(itemsContainer.children);
+          const data = items.map((el) => {
+            const status = el.querySelectorAll("span");
+            return {
+              text: el.querySelector("h2").innerText,
+              status: status.length > 0 ? status[1].innerText : "",
+            };
+          });
+          return { data };
+        } else {
+          const head = document.body.parentNode;
           return {
-            text: el.querySelector("h2").innerText,
-            status: status.length > 0 ? status[1].innerText : "",
+            error: "ok",
+            message: "error content",
+            content: "<html>" + head.innerHTML + "</html>",
           };
-        });
-        return { data };
+        }
       } catch (err) {
         return { error: "ok", message: err };
       }
     });
-
+    if (result.content && req.query.print) {
+      return res.send(result.content);
+    }
     res.json(result);
   } catch (err) {
     console.log(err);
