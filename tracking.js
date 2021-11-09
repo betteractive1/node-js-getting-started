@@ -1,0 +1,26 @@
+const puppeteer = require("puppeteer");
+const LAUNCH_PUPPETEER_OPTS = {
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-accelerated-2d-canvas",
+    "--disable-gpu",
+    "--window-size=1920x1080",
+  ],
+  headless: true,
+};
+
+const PAGE_PUPPETEER_OPTS = {
+  networkIdle2Timeout: 5000,
+  waitUntil: "networkidle2",
+  timeout: 10000,
+};
+
+module.exports = async function (req, res) {
+  const { id } = req.params;
+  const browser = await puppeteer.launch(LAUNCH_PUPPETEER_OPTS);
+  const page = await browser.newPage();
+  await page.goto(`https://www.pochta.ru/tracking#${id}`, PAGE_PUPPETEER_OPTS);
+  res.json({ id });
+};
