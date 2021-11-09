@@ -30,7 +30,7 @@ module.exports = async function (req, res) {
       `https://www.pochta.ru/tracking#${id}`,
       PAGE_PUPPETEER_OPTS
     );
-    await page.waitForSelector("div[data-barcode]", { timeout: 2000 });
+    await page.waitForSelector("div[data-barcode]", { timeout: 2800 });
     const result = await page.evaluate(() => {
       try {
         const root = document.querySelector("div[data-barcode]");
